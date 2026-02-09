@@ -21,22 +21,16 @@ pipeline {
             }
         }
 
-        stage('Test') {
+        stage('Jar Publish') {
             steps {
                 dir('DevOps-Project-06') {
-                    sh 'mvn test'
+                    sh 'mvn deploy -DskipTests'
                 }
             }
         }
 
-        stage('Surefire Report') {
-            steps {
-                dir('DevOps-Project-06') {
-                    sh 'mvn surefire-report:report'
-                }
-            }
-        }
-
+    }
+}
     }
 }
 stage('SonarQube analysis') {

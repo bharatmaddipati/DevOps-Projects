@@ -12,7 +12,6 @@ pipeline {
         stage('Build') {
             steps {
                 dir('DevOps-Project-06') {
-                    echo 'Build started'
                     sh 'mvn clean package -DskipTests'
                 }
             }
@@ -29,20 +28,18 @@ pipeline {
         stage('Docker Build') {
             steps {
                 dir('DevOps-Project-06') {
-                    echo 'Docker build started'
                     sh 'docker build -t demo-workshop:latest .'
                 }
             }
         }
-    }
-}
-stage('Run Docker Container') {
-    steps {
-        dir('DevOps-Project-06') {
-            sh '''
-              docker rm -f demo-app || true
-              docker run -d -p 8081:8000 --name demo-app demo-workshop:latest
-            '''
+
+        stage('Run Docker Container') {
+            steps {
+                sh '''
+                  docker rm -f demo-app || true
+                  docker run -d -p 8081:8000 --name demo-app demo-workshop:latest
+                '''
+            }
         }
     }
 }

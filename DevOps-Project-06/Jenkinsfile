@@ -5,16 +5,18 @@ pipeline {
     agent { label 'maven' }
 
     stages {
+
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
 
-        stage('Build & Test') {
+        stage('Build') {
             steps {
                 dir('DevOps-Project-06') {
-                    sh 'mvn clean deploy -Dmaven.test.skip=true'
+                    echo '----------- build started ----------'
+                    sh 'mvn clean package -DskipTests'
                 }
             }
         }
@@ -34,6 +36,7 @@ pipeline {
                 }
             }
         }
+
     }
 }
 stage('SonarQube analysis') {

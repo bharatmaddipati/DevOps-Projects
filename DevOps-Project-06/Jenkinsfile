@@ -2,32 +2,41 @@ def registry = 'https://satishk.jfrog.io'
 def imageName = 'satishk.jfrog.io/satish-docker-local/sample_app'
 def version   = '2.1.2'
 pipeline {
-    agent {
-        node {
-            label 'maven'
-        }
-    }
-environment {
-    PATH = "/opt/apache-maven-3.9.4/bin:$PATH"
-}
+    agent { label 'maven' }
+
     stages {
-        stage('build') {
-    steps {
-        echo '----------- build started ----------'
-        dir('DevOps-Project-06') {
-            sh 'mvn clean deploy -Dmaven.test.skip=true'
-        }
-    }
-}
-        stage("test"){
-            steps{
-                echo "----------- unit test started ----------"
-                sh 'mvn surefire-report:report'
-                 echo "----------- unit test Complted ----------"
+        stage('Checkout') {
+            steps {
+                checkout scm
             }
         }
 
-        stage('SonarQube analysis') {
+        stage('Build & Test') {
+            steps {
+                dir('DevOps-Project-06') {
+                    sh 'mvn clean deploy -Dmaven.test.skip=true'
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                dir('DevOps-Project-06') {
+                    sh 'mvn test'
+                }
+            }
+        }
+
+        stage('Surefire Report') {
+            steps {
+                dir('DevOps-Project-06') {
+                    sh 'mvn surefire-report:report'
+                }
+            }
+        }
+    }
+}
+stage('SonarQube analysis') {
         environment {
           scannerHome = tool 'satish-sonarqube-scanner'
         }

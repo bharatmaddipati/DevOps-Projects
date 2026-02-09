@@ -36,12 +36,10 @@ pipeline {
     }
 }
         stage('Run Docker Container') {
-            steps {
-                sh '''
-                  docker rm -f demo-app || true
-                  docker run -d -p 8081:8000 --name demo-app demo-workshop:${BUILD_NUMBER}
-                '''
-            }
-        }
+    steps {
+        sh """
+          docker rm -f demo-app || true
+          docker run -d -p 8081:8000 --name demo-app demo-workshop:${BUILD_NUMBER}
+        """
     }
 }

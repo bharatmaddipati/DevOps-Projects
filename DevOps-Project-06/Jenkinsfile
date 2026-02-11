@@ -1,80 +1,47 @@
 pipeline {
-    agent { label 'maven' }
+    agent any
 
     environment {
-        IMAGE_NAME = "bharatm99/demo-workshop"
-    }
+    DOCKER_IMAGE = "bharatm99/devops6-app"
+}
 
     stages {
 
         stage('Checkout') {
             steps {
-                checkout scm
+                git 'https://github.com/bharatmaddipati/DevOps-Projects.git'
             }
         }
 
-        stage('Build Maven') {
+        stage('Build') {
             steps {
-                dir('DevOps-Project-06') {
-                    sh 'mvn clean package -DskipTests'
+                echo "Building application..."
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                script {
+                    docker.build("${DOCKER_IMAGE}:${env.BUILD_NUMBER}")
                 }
             }
         }
 
-        stage('Deploy Jar') {
+        stage('Push to DockerHub') {
             steps {
-                dir('DevOps-Project-06') {
-                    sh 'mvn deploy -DskipTests'
+                script {
+                    docker.withRegistry('', 'dockerhub-creds') {
+                        docker.image("${DOCKER_IMAGE}:${env.BUILD_NUMBER}").push()
+                        docker.image("${DOCKER_IMAGE}:${env.BUILD_NUMBER}").push('latest')
+                    }
                 }
             }
         }
 
-       stage('Docker Build') {
-    steps {
-        script {
-            docker.build("devops6-app:${env.BUILD_NUMBER}")
-        }
-    }
-}
-
-
-        stage('Docker Push') {
+        stage('Deploy via Ansible') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-creds',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-
-                    sh """
-                        echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                        docker push ${IMAGE_NAME}:${BUILD_NUMBER}
-                    """
-                }
+                sh 'ansible-playbook deploy.yml'
             }
-        }
-
-        stage('Run Docker Container') {
-            steps {
-                sh """
-                    echo "Stopping old container if exists"
-                    docker rm -f demo-app || true
-
-                    echo "Running new container"
-                    docker run -d -p 8081:8000 --name demo-app ${IMAGE_NAME}:${BUILD_NUMBER}
-
-                    docker ps
-                """
-            }
-        }
-    }
-
-    post {
-        success {
-            echo "Deployment successful!"
-        }
-        failure {
-            echo "Pipeline failed!"
         }
     }
 }

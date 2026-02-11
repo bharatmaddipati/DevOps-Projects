@@ -25,31 +25,29 @@ pipeline {
             }
         }
 
-        stage('Docker Build') {
-            steps {
-                dir('DevOps-Project-06') {
-                    echo 'Docker build started'
-                    sh "docker build -t demo-workshop:${BUILD_NUMBER} ."
-                }
-            }
-        }
-        stage('Docker Push') {
+      stage('Docker Build') {
     steps {
-        withCredentials([usernamePassword(
-            credentialsId: 'dockerhub-creds',
-            usernameVariable: 'DOCKER_USER',
-            passwordVariable: 'DOCKER_PASS'
-        )]) {
-            sh '''
-              echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-              docker tag demo-workshop:${BUILD_NUMBER} $DOCKER_USER/demo-workshop:${BUILD_NUMBER}
-              docker push $DOCKER_USER/demo-workshop:${BUILD_NUMBER}
-            '''
+        dir('DevOps-Project-06') {
+            sh """
+                docker build -t bharatm99/demo-workshop:${BUILD_NUMBER} .
+            """
         }
     }
 }
 
+stage('Docker Push') {
+    steps {
+        withCredentials([usernamePassword(credentialsId: 'dockerhub-cred',
+                          usernameVariable: 'DOCKER_USER',
+                          passwordVariable: 'DOCKER_PASS')]) {
 
+            sh """
+                echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                docker push bharatm99/demo-workshop:${BUILD_NUMBER}
+            """
+        }
+    }
+}
        stage('Run Docker Container') {
     steps {
         sh '''

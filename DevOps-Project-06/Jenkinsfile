@@ -1,6 +1,10 @@
 pipeline {
     agent { label 'maven' }
 
+    environment {
+        IMAGE_NAME = "bharatm99/demo-workshop"
+    }
+
     stages {
 
         stage('Checkout') {
@@ -9,7 +13,7 @@ pipeline {
             }
         }
 
-        stage('Build') {
+        stage('Build Maven') {
             steps {
                 dir('DevOps-Project-06') {
                     sh 'mvn clean package -DskipTests'
@@ -25,37 +29,55 @@ pipeline {
             }
         }
 
-      stage('Docker Build') {
-    steps {
-        dir('DevOps-Project-06') {
-            echo "Docker build started"
-            sh """
-              docker build -t bharatm99/demo-workshop:${BUILD_NUMBER} .
-              echo "Listing Docker Images"
-              docker images
-            """
+        stage('Docker Build') {
+            steps {
+                dir('DevOps-Project-06') {
+                    echo "Building Docker image"
+                    sh """
+                        docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} .
+                        docker images | grep demo-workshop
+                    """
+                }
+            }
         }
-    }
-}
-stage('Docker Push') {
-    steps {
-        withCredentials([usernamePassword(credentialsId: 'dockerhub-creds',
-                          usernameVariable: 'DOCKER_USER',
-                          passwordVariable: 'DOCKER_PASS')]) {
 
-            sh """
-                echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                docker push bharatm99/demo-workshop:${BUILD_NUMBER}
-            """
+        stage('Docker Push') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+
+                    sh """
+                        echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                        docker push ${IMAGE_NAME}:${BUILD_NUMBER}
+                    """
+                }
+            }
+        }
+
+        stage('Run Docker Container') {
+            steps {
+                sh """
+                    echo "Stopping old container if exists"
+                    docker rm -f demo-app || true
+
+                    echo "Running new container"
+                    docker run -d -p 8081:8000 --name demo-app ${IMAGE_NAME}:${BUILD_NUMBER}
+
+                    docker ps
+                """
+            }
         }
     }
-}
-       stage('Run Docker Container') {
-    steps {
-        sh """
-          docker rm -f demo-app || true
-          echo "Running new container"
-          docker run -d -p 8081:8000 --name demo-app bharatm99/demo-workshop:${BUILD_NUMBER}
-        """
+
+    post {
+        success {
+            echo "Deployment successful!"
+        }
+        failure {
+            echo "Pipeline failed!"
+        }
     }
 }

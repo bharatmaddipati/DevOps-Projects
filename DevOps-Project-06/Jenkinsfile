@@ -52,15 +52,10 @@ stage('Docker Push') {
 }
        stage('Run Docker Container') {
     steps {
-        sh '''
-          echo "Stopping old container if exists"
-          docker ps -q --filter "name=demo-app" | grep -q . && docker stop demo-app || true
-          docker rm demo-app || true
-
+        sh """
+          docker rm -f demo-app || true
           echo "Running new container"
           docker run -d -p 8081:8000 --name demo-app bharatm99/demo-workshop:${BUILD_NUMBER}
-        '''
-    }
-}
+        """
     }
 }

@@ -50,13 +50,20 @@ pipeline {
 }
 
 
-        stage('Run Docker Container') {
-            steps {
-                sh '''
-                  docker rm -f demo-app || true
-                  docker run -d -p 8081:8000 --name demo-app demo-workshop:${BUILD_NUMBER}
-                '''
-            }
-        }
+       stage('Run Docker Container') {
+    steps {
+        sh '''
+          echo "Stopping old container if exists"
+          docker ps -q --filter "name=demo-app" | grep -q . && docker stop demo-app || true
+          docker rm demo-app || true
+
+          echo "Running new container"
+          docker run -d \
+            -p 8081:8000 \
+            --name demo-app \
+            demo-workshop:${BUILD_NUMBER}
+        '''
+    }
+}
     }
 }

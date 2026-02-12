@@ -4,6 +4,7 @@ pipeline {
     environment {
         IMAGE_NAME = "bharatm99/devops6-app"
         CONTAINER_NAME = "devops6-app"
+        ARTIFACTORY_SERVER = "artifactory-server"   // Must match name in Configure System
     }
 
     stages {
@@ -26,6 +27,24 @@ pipeline {
                             """
                         }
                     }
+                }
+            }
+        }
+
+        stage('Upload Artifact to Artifactory') {
+            steps {
+                dir('DevOps-Project-06') {
+                    rtUpload(
+                        serverId: "${ARTIFACTORY_SERVER}",
+                        spec: """{
+                            "files": [
+                                {
+                                    "pattern": "target/*.jar",
+                                    "target": "libs-release-local/devops6/"
+                                }
+                            ]
+                        }"""
+                    )
                 }
             }
         }

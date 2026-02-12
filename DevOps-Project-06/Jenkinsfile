@@ -62,14 +62,21 @@ pipeline {
 
      stage('Push to JFrog Artifactory') {
     steps {
-        script {
-            jfrogCli.withServer('jfrog-server') {
+        withCredentials([string(credentialsId: 'JFROG_TOKEN', variable: 'JF_TOKEN')]) {
+            sh '''
+                # Configure JFrog CLI
+                jf config add my-server \
+                    --url=https://trialzb4886.jfrog.io \
+                    --access-token=$JF_TOKEN \
+                    --interactive=false
 
-                sh """
-                    jf docker push ${IMAGE_NAME}:${BUILD_NUMBER} docker-trial
-                    jf docker push ${IMAGE_NAME}:latest docker-trial
-                """
-            }
+                # Docker login to JFrog
+                jf docker login
+
+                # Push Docker image to docker-trial repo
+                jf docker push bharatm99/devops6-app:${BUILD_NUMBER} docker-trial
+                jf docker push bharatm99/devops6-app:latest docker-trial
+            '''
         }
     }
 }

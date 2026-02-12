@@ -5,7 +5,7 @@ pipeline {
         IMAGE_NAME = "devops6-app"
         CONTAINER_NAME = "devops6-app"
         ARTIFACTORY_SERVER = "jfrog-server"
-        DOCKER_REPO = "docker-local"
+        DOCKER_REPO = "docker-trial"
     }
 
     stages {

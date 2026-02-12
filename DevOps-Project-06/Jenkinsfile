@@ -4,10 +4,14 @@ pipeline {
     environment {
         IMAGE_NAME = "bharatm99/devops6-app"
         CONTAINER_NAME = "devops6-app"
-        JFROG_SERVER = "jfrog-server"
+        JFROG_URL = "https://trialzb4886.jfrog.io"
         JFROG_DOCKER_REPO = "docker-trial"
     }
-    
+
+    options {
+        timestamps()
+    }
+
     stages {
 
         stage('Checkout') {
@@ -21,11 +25,12 @@ pipeline {
                 dir('DevOps-Project-06') {
                     withSonarQubeEnv('SonarQube') {
                         withCredentials([string(credentialsId: 'SONAR_AUTH_TOKEN', variable: 'SONAR_TOKEN')]) {
-                            sh """
-                                mvn clean package -DskipTests sonar:sonar \
+                            sh '''
+                                mvn clean package -DskipTests \
+                                sonar:sonar \
                                 -Dsonar.projectKey=devops6-app \
                                 -Dsonar.login=$SONAR_TOKEN
-                            """
+                            '''
                         }
                     }
                 }
@@ -35,59 +40,72 @@ pipeline {
         stage('Docker Build') {
             steps {
                 dir('DevOps-Project-06') {
-                    sh """
+                    sh '''
                         docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} .
                         docker tag ${IMAGE_NAME}:${BUILD_NUMBER} ${IMAGE_NAME}:latest
-                    """
+                    '''
                 }
             }
         }
 
         stage('Push to DockerHub') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-creds',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
+                retry(2) {
+                    withCredentials([usernamePassword(
+                        credentialsId: 'dockerhub-creds',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )]) {
 
-                    sh """
-                        echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                        docker push ${IMAGE_NAME}:${BUILD_NUMBER}
-                        docker push ${IMAGE_NAME}:latest
-                    """
+                        sh '''
+                            echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                            docker push ${IMAGE_NAME}:${BUILD_NUMBER}
+                            docker push ${IMAGE_NAME}:latest
+                        '''
+                    }
                 }
             }
         }
 
-     stage('Push to JFrog Artifactory') {
-    steps {
-        withCredentials([string(credentialsId: 'JFROG_TOKEN', variable: 'JF_TOKEN')]) {
-            sh '''
-                # Configure JFrog CLI
-                jf config add my-server \
-                    --url=https://trialzb4886.jfrog.io \
-                    --access-token=$JF_TOKEN \
-                    --interactive=false
+        stage('Push to JFrog Artifactory') {
+            steps {
+                withCredentials([string(credentialsId: 'JFROG_TOKEN', variable: 'JF_TOKEN')]) {
+                    sh '''
+                        # Configure JFrog CLI
+                        jf config add my-server \
+                          --url=$JFROG_URL \
+                          --access-token=$JF_TOKEN \
+                          --interactive=false || true
 
-                # Docker login to JFrog
-                jf docker login
+                        # Login Docker to JFrog
+                        echo $JF_TOKEN | docker login trialzb4886.jfrog.io \
+                          --username=admin \
+                          --password-stdin
 
-                # Push Docker image to docker-trial repo
-                jf docker push bharatm99/devops6-app:${BUILD_NUMBER} docker-trial
-                jf docker push bharatm99/devops6-app:latest docker-trial
-            '''
+                        # Tag image for JFrog
+                        docker tag ${IMAGE_NAME}:${BUILD_NUMBER} \
+                          trialzb4886.jfrog.io/${JFROG_DOCKER_REPO}/devops6-app:${BUILD_NUMBER}
+
+                        docker tag ${IMAGE_NAME}:latest \
+                          trialzb4886.jfrog.io/${JFROG_DOCKER_REPO}/devops6-app:latest
+
+                        # Push to JFrog
+                        docker push trialzb4886.jfrog.io/${JFROG_DOCKER_REPO}/devops6-app:${BUILD_NUMBER}
+                        docker push trialzb4886.jfrog.io/${JFROG_DOCKER_REPO}/devops6-app:latest
+                    '''
+                }
+            }
         }
-    }
-}
 
         stage('Deploy Container') {
             steps {
-                sh """
+                sh '''
                     docker stop ${CONTAINER_NAME} || true
                     docker rm ${CONTAINER_NAME} || true
-                    docker run -d -p 8000:8000 --name ${CONTAINER_NAME} ${IMAGE_NAME}:latest
-                """
+                    docker run -d -p 8000:8000 \
+                      --name ${CONTAINER_NAME} \
+                      ${IMAGE_NAME}:latest
+                '''
             }
         }
     }

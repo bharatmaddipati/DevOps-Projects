@@ -3,6 +3,7 @@ pipeline {
 
     environment {
         IMAGE_NAME = "bharatm99/devops6-app"
+        CONTAINER_NAME = "devops6-app"
     }
 
     stages {
@@ -13,26 +14,18 @@ pipeline {
             }
         }
 
-        stage('SonarQube Analysis') {
+        stage('Build & SonarQube Analysis') {
             steps {
                 dir('DevOps-Project-06') {
                     withSonarQubeEnv('SonarQube') {
                         withCredentials([string(credentialsId: 'SONAR_AUTH_TOKEN', variable: 'SONAR_TOKEN')]) {
                             sh """
-                                mvn clean verify -DskipTests sonar:sonar \
+                                mvn clean package -DskipTests sonar:sonar \
                                 -Dsonar.projectKey=devops6-app \
-                                -Dsonar.login=${SONAR_TOKEN}
+                                -Dsonar.login=$SONAR_TOKEN
                             """
                         }
                     }
-                }
-            }
-        }
-
-        stage('Build Jar') {
-            steps {
-                dir('DevOps-Project-06') {
-                    sh 'mvn clean package -DskipTests'
                 }
             }
         }
@@ -42,6 +35,7 @@ pipeline {
                 dir('DevOps-Project-06') {
                     sh """
                         docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} .
+                        docker tag ${IMAGE_NAME}:${BUILD_NUMBER} ${IMAGE_NAME}:latest
                     """
                 }
             }
@@ -58,9 +52,29 @@ pipeline {
                     sh """
                         echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
                         docker push ${IMAGE_NAME}:${BUILD_NUMBER}
+                        docker push ${IMAGE_NAME}:latest
                     """
                 }
             }
+        }
+
+        stage('Deploy Container') {
+            steps {
+                sh """
+                    docker stop ${CONTAINER_NAME} || true
+                    docker rm ${CONTAINER_NAME} || true
+                    docker run -d -p 8080:8080 --name ${CONTAINER_NAME} ${IMAGE_NAME}:latest
+                """
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Pipeline completed successfully!"
+        }
+        failure {
+            echo "❌ Pipeline failed!"
         }
     }
 }

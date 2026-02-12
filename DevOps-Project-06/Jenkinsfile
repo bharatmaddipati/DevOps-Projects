@@ -79,7 +79,7 @@ pipeline {
 
                         # Login Docker to JFrog
                         echo $JF_TOKEN | docker login trialzb4886.jfrog.io \
-                          --username=admin \
+                          --username=bharatmaddipati@synergetics-consulting.com \
                           --password-stdin
 
                         # Tag image for JFrog

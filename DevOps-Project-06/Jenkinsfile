@@ -2,10 +2,10 @@ pipeline {
     agent { label 'agent1' }
 
     environment {
-        IMAGE_NAME = "devops6-app"
+        IMAGE_NAME = "bharatm99/devops6-app"
         CONTAINER_NAME = "devops6-app"
-        ARTIFACTORY_SERVER = "jfrog-server"
-        DOCKER_REPO = "docker-trial"
+        JFROG_SERVER = "jfrog-server"
+        JFROG_DOCKER_REPO = "docker-trial"
     }
 
     stages {
@@ -43,15 +43,30 @@ pipeline {
             }
         }
 
-        stage('Push Docker Image to JFrog') {
+        stage('Push to DockerHub') {
             steps {
-                script {
-                    def server = Artifactory.server("${ARTIFACTORY_SERVER}")
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
 
-                    def rtDockerPush = Artifactory.docker server: server
-                    rtDockerPush.push("${IMAGE_NAME}:${BUILD_NUMBER}", "${DOCKER_REPO}")
-                    rtDockerPush.push("${IMAGE_NAME}:latest", "${DOCKER_REPO}")
+                    sh """
+                        echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                        docker push ${IMAGE_NAME}:${BUILD_NUMBER}
+                        docker push ${IMAGE_NAME}:latest
+                    """
                 }
+            }
+        }
+
+        stage('Push to JFrog Artifactory') {
+            steps {
+                rtDockerPush(
+                    serverId: "${JFROG_SERVER}",
+                    image: "${IMAGE_NAME}:${BUILD_NUMBER}",
+                    targetRepo: "${JFROG_DOCKER_REPO}"
+                )
             }
         }
 
@@ -60,7 +75,7 @@ pipeline {
                 sh """
                     docker stop ${CONTAINER_NAME} || true
                     docker rm ${CONTAINER_NAME} || true
-                    docker run -d -p 8080:8080 --name ${CONTAINER_NAME} ${IMAGE_NAME}:latest
+                    docker run -d -p 8000:8000 --name ${CONTAINER_NAME} ${IMAGE_NAME}:latest
                 """
             }
         }

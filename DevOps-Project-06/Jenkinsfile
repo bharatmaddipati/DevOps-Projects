@@ -1,9 +1,13 @@
 pipeline {
     agent { label 'agent1' }
 
+    tools {
+        maven 'Maven'
+        jdk 'JDK17'
+    }
+
     environment {
         IMAGE_NAME = "bharatm99/devops6-app"
-        SONAR_TOKEN = credentials('SONAR_AUTH_TOKEN')
     }
 
     stages {
@@ -18,18 +22,19 @@ pipeline {
             steps {
                 dir('DevOps-Project-06') {
                     withSonarQubeEnv('SonarQube') {
-                        sh """
-                            mvn clean verify sonar:sonar \
-                            -Dsonar.projectKey=devops6-app \
-                            -Dsonar.host.url=http://43.205.231.201:9000 \
-                            -Dsonar.login=${SONAR_TOKEN}
-                        """
+                        withCredentials([string(credentialsId: 'SONAR_AUTH_TOKEN', variable: 'SONAR_TOKEN')]) {
+                            sh """
+                                mvn clean verify -DskipTests sonar:sonar \
+                                -Dsonar.projectKey=devops6-app \
+                                -Dsonar.login=${SONAR_TOKEN}
+                            """
+                        }
                     }
                 }
             }
         }
 
-        stage('Build') {
+        stage('Build Jar') {
             steps {
                 dir('DevOps-Project-06') {
                     sh 'mvn clean package -DskipTests'
@@ -61,6 +66,15 @@ pipeline {
                     """
                 }
             }
+        }
+    }
+
+    post {
+        success {
+            echo "Pipeline executed successfully!"
+        }
+        failure {
+            echo "Pipeline failed. Check logs."
         }
     }
 }

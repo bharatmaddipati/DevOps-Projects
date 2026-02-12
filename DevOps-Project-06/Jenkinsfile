@@ -1,11 +1,6 @@
 pipeline {
     agent { label 'agent1' }
 
-    tools {
-        maven 'Maven'
-        jdk 'JDK17'
-    }
-
     environment {
         IMAGE_NAME = "bharatm99/devops6-app"
     }
@@ -66,15 +61,6 @@ pipeline {
                     """
                 }
             }
-        }
-    }
-
-    post {
-        success {
-            echo "Pipeline executed successfully!"
-        }
-        failure {
-            echo "Pipeline failed. Check logs."
         }
     }
 }

@@ -60,15 +60,19 @@ pipeline {
             }
         }
 
-        stage('Push to JFrog Artifactory') {
-            steps {
-                rtDockerPush(
-                    serverId: "${JFROG_SERVER}",
-                    image: "${IMAGE_NAME}:${BUILD_NUMBER}",
-                    targetRepo: "${JFROG_DOCKER_REPO}"
-                )
+     stage('Push to JFrog Artifactory') {
+    steps {
+        script {
+            jfrogCli.withServer('jfrog-server') {
+
+                sh """
+                    jf docker push ${IMAGE_NAME}:${BUILD_NUMBER} docker-trial
+                    jf docker push ${IMAGE_NAME}:latest docker-trial
+                """
             }
         }
+    }
+}
 
         stage('Deploy Container') {
             steps {

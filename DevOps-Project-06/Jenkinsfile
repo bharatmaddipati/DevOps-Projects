@@ -1,52 +1,49 @@
 pipeline {
-    agent any
+    agent { label 'agent1' }
 
     environment {
-    DOCKER_IMAGE = "bharatm99/devops6-app"
-}
+        IMAGE_NAME = "bharatm99/devops6-app"
+    }
 
     stages {
 
         stage('Checkout') {
             steps {
-                git 'https://github.com/bharatmaddipati/DevOps-Projects.git'
+                checkout scm
             }
         }
 
         stage('Build') {
             steps {
-                echo "Building application..."
+                dir('DevOps-Project-06') {
+                    sh 'mvn clean package -DskipTests'
+                }
             }
         }
 
         stage('Docker Build') {
             steps {
-                script {
+                dir('DevOps-Project-06') {
                     sh """
-                    cd DevOps-Project-06
-                    docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} .
-                  """
+                        docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} .
+                    """
                 }
             }
         }
 
         stage('Push to DockerHub') {
-    steps {
-        withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', 
-        usernameVariable: 'DOCKER_USER', 
-        passwordVariable: 'DOCKER_PASS')]) {
-
-            sh """
-            echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-            docker push ${IMAGE_NAME}:${BUILD_NUMBER}
-            """
-        }
-    }
-}
-
-        stage('Deploy via Ansible') {
             steps {
-                sh 'ansible-playbook deploy.yml'
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-cred',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+
+                    sh """
+                        echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                        docker push ${IMAGE_NAME}:${BUILD_NUMBER}
+                    """
+                }
             }
         }
     }

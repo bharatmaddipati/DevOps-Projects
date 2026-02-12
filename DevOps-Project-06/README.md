@@ -1,7 +1,6 @@
-  # 🚀 Implementation of the Entire Advanced CI/CD Pipeline with Major DevOps Tools
+# 🚀 Implementation of the Entire Advanced CI/CD Pipeline with Major DevOps Tools
 
 ![DevOps Pipeline](https://imgur.com/WcCpKVU.png)
-
 
 A comprehensive end-to-end CI/CD pipeline leveraging **Terraform**, **Ansible**, **Jenkins**, **SonarQube**, **JFrog**, **Docker**, **EKS**, **Prometheus**, and **Grafana**.
 

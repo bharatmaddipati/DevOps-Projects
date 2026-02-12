@@ -7,7 +7,7 @@ pipeline {
         JFROG_SERVER = "jfrog-server"
         JFROG_DOCKER_REPO = "docker-trial"
     }
-
+    
     stages {
 
         stage('Checkout') {

@@ -3,6 +3,7 @@ pipeline {
 
     environment {
         IMAGE_NAME = "bharatm99/devops6-app"
+        SONAR_TOKEN = credentials('SONAR_AUTH_TOKEN')
     }
 
     stages {
@@ -10,6 +11,21 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                dir('DevOps-Project-06') {
+                    withSonarQubeEnv('SonarQube') {
+                        sh """
+                            mvn clean verify sonar:sonar \
+                            -Dsonar.projectKey=devops6-app \
+                            -Dsonar.host.url=http://43.205.231.201:9000 \
+                            -Dsonar.login=${SONAR_TOKEN}
+                        """
+                    }
+                }
             }
         }
 

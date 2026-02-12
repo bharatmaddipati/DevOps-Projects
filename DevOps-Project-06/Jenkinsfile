@@ -2,9 +2,10 @@ pipeline {
     agent { label 'agent1' }
 
     environment {
-        IMAGE_NAME = "bharatm99/devops6-app"
+        IMAGE_NAME = "devops6-app"
         CONTAINER_NAME = "devops6-app"
-        ARTIFACTORY_SERVER = "artifactory-server"   // Must match name in Configure System
+        ARTIFACTORY_SERVER = "jfrog-server"
+        DOCKER_REPO = "docker-local"
     }
 
     stages {
@@ -31,24 +32,6 @@ pipeline {
             }
         }
 
-        stage('Upload Artifact to Artifactory') {
-            steps {
-                dir('DevOps-Project-06') {
-                    rtUpload(
-                        serverId: "${ARTIFACTORY_SERVER}",
-                        spec: """{
-                            "files": [
-                                {
-                                    "pattern": "target/*.jar",
-                                    "target": "libs-release-local/devops6/"
-                                }
-                            ]
-                        }"""
-                    )
-                }
-            }
-        }
-
         stage('Docker Build') {
             steps {
                 dir('DevOps-Project-06') {
@@ -60,19 +43,14 @@ pipeline {
             }
         }
 
-        stage('Push to DockerHub') {
+        stage('Push Docker Image to JFrog') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-creds',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
+                script {
+                    def server = Artifactory.server("${ARTIFACTORY_SERVER}")
 
-                    sh """
-                        echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                        docker push ${IMAGE_NAME}:${BUILD_NUMBER}
-                        docker push ${IMAGE_NAME}:latest
-                    """
+                    def rtDockerPush = Artifactory.docker server: server
+                    rtDockerPush.push("${IMAGE_NAME}:${BUILD_NUMBER}", "${DOCKER_REPO}")
+                    rtDockerPush.push("${IMAGE_NAME}:latest", "${DOCKER_REPO}")
                 }
             }
         }
